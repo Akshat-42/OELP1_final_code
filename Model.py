@@ -4,8 +4,6 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-
-# Updated Imports for newer TensorFlow/Keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Input, BatchNormalization
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -21,9 +19,13 @@ SCALER_Y_PATH = "scaler_y.joblib"
 V_BINS = [0, 22, 26, np.inf]
 V_LABELS = ['Low', 'Medium', 'High']
 
-# Updated Spin Bins for Magnitude
-W_BINS = [0, 150, 220, np.inf]
-W_LABELS = ['Low', 'Medium', 'High']
+W_MAG_BINS = [0, 150, 220, np.inf]
+W_MAG_LABELS = ['Low', 'Medium', 'High']
+
+# NEW: Spin Angle Categories (Left Spin, Straight, Right Spin)
+# -10 to 10 degrees is considered "Straight-ish"
+W_ANGLE_BINS = [-np.inf, -10, 10, np.inf]
+W_ANGLE_LABELS = ['Negative_Spin', 'Neutral_Spin', 'Positive_Spin']
 
 def load_and_clean_data(filepath):
     if not os.path.exists(filepath):
@@ -38,12 +40,13 @@ def load_and_clean_data(filepath):
 
 def engineer_features(data):
     data['v_cat'] = pd.cut(data['v_mag'], bins=V_BINS, labels=V_LABELS, right=False)
-    # Use w_mag directly for categorization
-    data['w_cat'] = pd.cut(data['w_mag'], bins=W_BINS, labels=W_LABELS, right=False)
+    data['w_mag_cat'] = pd.cut(data['w_mag'], bins=W_MAG_BINS, labels=W_MAG_LABELS, right=False)
+    
+    # NEW: Categorize the Spin Direction
+    data['w_angle_cat'] = pd.cut(data['w_angle'], bins=W_ANGLE_BINS, labels=W_ANGLE_LABELS)
     return data
 
 def build_model(input_dim, output_dim):
-    # Deeper model to reduce error
     model = Sequential([
         Input(shape=(input_dim,)),
         Dense(256, activation='relu'),
@@ -68,18 +71,16 @@ def main():
     df = load_and_clean_data(DATA_PATH)
     df = engineer_features(df)
     
-    # Inputs: Start Pos, Land Pos, Requirements (Cats)
+    # Inputs: Now includes w_angle_cat to resolve ambiguity
     feature_cols = ['land_x', 'land_y', 'p_x', 'p_y', 'p_z']
-    cat_cols = ['v_cat', 'w_cat']
+    cat_cols = ['v_cat', 'w_mag_cat', 'w_angle_cat']
     
-    # Targets: Updated to w_mag and w_angle
     target_cols = ['v_mag', 'phi', 'theta', 'w_mag', 'w_angle']
     
     X = df[feature_cols + cat_cols]
     y = df[target_cols]
 
     print(f"Features: {feature_cols + cat_cols}")
-    print(f"Targets: {target_cols}")
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -97,9 +98,8 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X_processed, y_processed, test_size=0.1, random_state=42)
     
     model = build_model(X_train.shape[1], y_train.shape[1])
-    model.compile(optimizer='adam', loss='mean_squared_error') # MSE is best for regression
+    model.compile(optimizer='adam', loss='mean_squared_error')
     
-    # Learning Rate Scheduler to fine-tune error at the end
     lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001)
     early_stopper = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
     

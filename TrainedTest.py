@@ -16,8 +16,12 @@ RESULTS_FILE = "model_test_results.txt"
 
 V_BINS = [0, 22, 26, np.inf]
 V_LABELS = ['Low', 'Medium', 'High']
-W_BINS = [0, 150, 220, np.inf]
-W_LABELS = ['Low', 'Medium', 'High']
+
+W_MAG_BINS = [0, 150, 220, np.inf]
+W_MAG_LABELS = ['Low', 'Medium', 'High']
+
+W_ANGLE_BINS = [-np.inf, -10, 10, np.inf]
+W_ANGLE_LABELS = ['Negative_Spin', 'Neutral_Spin', 'Positive_Spin']
 
 def generate_random_test_data(n_samples):
     return pd.DataFrame({
@@ -27,32 +31,28 @@ def generate_random_test_data(n_samples):
         "v_mag": np.random.uniform(18, 30, n_samples),
         "phi": np.random.uniform(0, 5, n_samples),
         "theta": np.random.uniform(-5, 5, n_samples),
-        # New Params
         "w_mag": np.random.uniform(100, 260, n_samples),
         "w_angle": np.random.uniform(-45, 45, n_samples)
     })
 
 def categorize_features(df):
     df['v_cat'] = pd.cut(df['v_mag'], bins=V_BINS, labels=V_LABELS, right=False)
-    # w_cat uses w_mag directly now
-    df['w_cat'] = pd.cut(df['w_mag'], bins=W_BINS, labels=W_LABELS, right=False)
+    df['w_mag_cat'] = pd.cut(df['w_mag'], bins=W_MAG_BINS, labels=W_MAG_LABELS, right=False)
+    # New Angle Cat
+    df['w_angle_cat'] = pd.cut(df['w_angle'], bins=W_ANGLE_BINS, labels=W_ANGLE_LABELS)
     return df
 
 def sim_worker(args):
-    # Unpack including new mag/angle
     p_x, p_y, p_z, v_mag, phi, theta, w_mag, w_angle = args
-    
     phi_rad = np.radians(phi)
     theta_rad = np.radians(theta)
     w_angle_rad = np.radians(w_angle)
     
     pos_in = np.array([p_x, p_y, p_z])
-    
     v_z = v_mag * np.sin(phi_rad)
     v_xy = v_mag * np.cos(phi_rad)
     v_in = np.array([v_xy * np.cos(theta_rad), v_xy * np.sin(theta_rad), v_z])
     
-    # Convert Mag/Angle back to Vector for Physics Engine
     w_x = w_mag * np.sin(w_angle_rad)
     w_y = w_mag * np.cos(w_angle_rad)
     w_in = np.array([w_x, w_y, 0])
@@ -76,7 +76,7 @@ def main():
         print(f"Error loading model: {e}\nPlease run train_model.py first.")
         return
 
-    print("Generating Test Data (w_mag/w_angle mode)...")
+    print("Generating Test Data...")
     ground_truth = generate_random_test_data(SAMPLE_SIZE)
     ground_truth = categorize_features(ground_truth)
     
@@ -86,7 +86,7 @@ def main():
     model_input = pd.concat([
         landing_points, 
         ground_truth[['p_x', 'p_y', 'p_z']], 
-        ground_truth[['v_cat', 'w_cat']]
+        ground_truth[['v_cat', 'w_mag_cat', 'w_angle_cat']]
     ], axis=1)
     
     print("Step 2: AI Predicting Initial Conditions...")
@@ -95,7 +95,6 @@ def main():
     
     pred_df = pd.DataFrame(y_pred, columns=['v_mag', 'phi', 'theta', 'w_mag', 'w_angle'])
     
-    # Add back knowns
     pred_df['p_x'] = ground_truth['p_x'].values
     pred_df['p_y'] = ground_truth['p_y'].values
     pred_df['p_z'] = ground_truth['p_z'].values
