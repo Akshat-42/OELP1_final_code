@@ -10,7 +10,7 @@ from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from joblib import dump
 
 # --- Configuration ---
-DATA_PATH = "test_pts_new.csv"
+DATA_PATH = "Dataset/test_pts_new.csv"
 MODEL_SAVE_PATH = "cricket_trajectory_model.keras"
 SCALER_X_PATH = "scaler_X.joblib"
 SCALER_Y_PATH = "scaler_y.joblib"
@@ -107,7 +107,7 @@ def main():
     model.fit(
         X_train, y_train, 
         epochs=300, 
-        batch_size=64, 
+        batch_size=256, 
         validation_data=(X_test, y_test), 
         callbacks=[early_stopper, lr_scheduler]
     )

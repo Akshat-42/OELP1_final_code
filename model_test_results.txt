@@ -2,8 +2,8 @@
 ==================================================
 TEST RESULTS (4000 samples)
 ==================================================
-Mean Absolute Error X : 0.0985 m
-Mean Absolute Error Y : 0.0095 m
-Mean Distance Error   : 0.0997 m
+Mean Absolute Error X : 0.0946 m
+Mean Absolute Error Y : 0.0091 m
+Mean Distance Error   : 0.0958 m
 ==================================================
     

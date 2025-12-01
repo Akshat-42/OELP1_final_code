@@ -146,14 +146,14 @@ def generate_random_inputs(n_samples=50000):
     ])
 
 if __name__ == '__main__':
-    N_SAMPLES = 120000 # Large dataset for better learning
+    N_SAMPLES = 200000 # Large dataset for better learning
     print(f"Generating {N_SAMPLES} random training samples...")
     print(f"Using {cpu_count()} cores.")
     
     # Generate random inputs
     inputs = generate_random_inputs(N_SAMPLES)
     
-    final_pts_file = r"test_pts_new.csv"
+    final_pts_file = r"Dataset/test_pts_new.csv"
     
     start_time = time.time()
     with open(final_pts_file, "w+", newline="") as file:
